@@ -23,7 +23,8 @@ int loany_db_open(const char *filename, sqlite3 **db) {
   static const char *cmd_init_loans =
       "CREATE TABLE IF NOT EXISTS loans ("
       "  id INTEGER PRIMARY KEY,"
-      "  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT,"
+      "  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT "
+      "    CHECK(typeof(person_id) = 'integer'),"
       "  direction TEXT NOT NULL CHECK(direction IN ('lent', 'borrowed')),"
       "  principal_amount INTEGER NOT NULL CHECK(typeof(principal_amount) = "
       "    'integer' AND principal_amount > 0),"
@@ -37,7 +38,8 @@ int loany_db_open(const char *filename, sqlite3 **db) {
   static const char *cmd_init_payments =
       "CREATE TABLE IF NOT EXISTS payments ("
       "  id INTEGER PRIMARY KEY,"
-      "  loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE RESTRICT,"
+      "  loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE RESTRICT "
+      "    CHECK(typeof(loan_id) = 'integer'),"
       "  amount INTEGER NOT NULL CHECK(typeof(amount) = 'integer' AND amount > "
       "    0),"
       "  payment_date INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS "

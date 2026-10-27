@@ -280,6 +280,7 @@ static void test_delete_person_with_loans_blocked(void) {
   setup_loan(db);
   T_SQL_FAIL(db, "DELETE FROM people WHERE id = 1;");
   T_EQ(query_ll(db, "SELECT COUNT(*) FROM people;"), 1);
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 1);
   sqlite3_close(db);
 }
 
@@ -289,6 +290,7 @@ static void test_delete_loan_with_payments_blocked(void) {
   T_SQL_OK(db, "INSERT INTO payments(loan_id, amount) VALUES (1, 100);");
   T_SQL_FAIL(db, "DELETE FROM loans WHERE id = 1;");
   T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 1);
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM payments;"), 1);
   sqlite3_close(db);
 }
 
@@ -466,6 +468,316 @@ static void test_due_date_null_ok(void) {
   sqlite3_close(db);
 }
 
+/* ---------- integer strictness: people ---------- */
+
+static void test_created_at_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  T_SQL_FAIL(db, "INSERT INTO people(name, created_at) VALUES ('A', 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_created_at_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  T_SQL_FAIL(db, "INSERT INTO people(name, created_at) VALUES ('A', 1.5);");
+  sqlite3_close(db);
+}
+
+static void test_id_string_rejected(void) {
+  /* INTEGER PRIMARY KEY (rowid alias) refuses non-integer with SQLITE_MISMATCH
+   */
+  sqlite3 *db = open_fresh();
+  T_SQL_FAIL(db, "INSERT INTO people(id, name) VALUES ('abc', 'A');");
+  sqlite3_close(db);
+}
+
+static void test_id_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  T_SQL_FAIL(db, "INSERT INTO people(id, name) VALUES (1.5, 'A');");
+  sqlite3_close(db);
+}
+
+/* ---------- integer strictness: loans ---------- */
+
+static void test_principal_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_principal_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', 1.5);");
+  sqlite3_close(db);
+}
+
+static void test_principal_blob_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', x'31303030');"); /* BLOB "1000" */
+  sqlite3_close(db);
+}
+
+static void test_principal_numeric_string_becomes_integer(void) {
+  /* Documented behavior: INTEGER affinity losslessly converts numeric strings,
+     so '1234' lands as integer 1234. typeof check passes. */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+               "VALUES (1, 'lent', '1234');");
+  T_EQ(query_ll(db, "SELECT principal_amount FROM loans WHERE id=1;"), 1234);
+  T_EQ(query_ll(db, "SELECT typeof(principal_amount) = 'integer' "
+                    "FROM loans WHERE id=1;"),
+       1);
+  sqlite3_close(db);
+}
+
+static void test_principal_overflow_rejected(void) {
+  /* Larger than int64: SQLite falls back to REAL, typeof catches it */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', 99999999999999999999);");
+  sqlite3_close(db);
+}
+
+static void test_date_issued_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(
+      db,
+      "INSERT INTO loans(person_id, direction, principal_amount, date_issued) "
+      "VALUES (1, 'lent', 1000, 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_date_issued_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(
+      db,
+      "INSERT INTO loans(person_id, direction, principal_amount, date_issued) "
+      "VALUES (1, 'lent', 1000, 1.5);");
+  sqlite3_close(db);
+}
+
+static void test_due_date_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(
+      db, "INSERT INTO loans(person_id, direction, principal_amount, due_date) "
+          "VALUES (1, 'lent', 1000, 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_due_date_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(
+      db, "INSERT INTO loans(person_id, direction, principal_amount, due_date) "
+          "VALUES (1, 'lent', 1000, 1.5);");
+  sqlite3_close(db);
+}
+
+static void test_direction_blob_rejected(void) {
+  /* BLOB is never coerced to TEXT; IN check rejects it */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, x'6c656e74', 1000);"); /* BLOB "lent" */
+  sqlite3_close(db);
+}
+
+/* ---------- integer strictness: payments ---------- */
+
+static void test_amount_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES (1, 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_amount_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES (1, 1.5);");
+  sqlite3_close(db);
+}
+
+static void test_amount_numeric_string_becomes_integer(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_OK(db, "INSERT INTO payments(loan_id, amount) VALUES (1, '250');");
+  T_EQ(query_ll(db, "SELECT amount FROM payments WHERE id=1;"), 250);
+  T_EQ(query_ll(db,
+                "SELECT typeof(amount) = 'integer' FROM payments WHERE id=1;"),
+       1);
+  sqlite3_close(db);
+}
+
+static void test_amount_overflow_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) "
+                 "VALUES (1, 99999999999999999999);");
+  sqlite3_close(db);
+}
+
+static void test_payment_date_text_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount, payment_date) "
+                 "VALUES (1, 100, 'abc');");
+  sqlite3_close(db);
+}
+
+static void test_payment_date_real_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount, payment_date) "
+                 "VALUES (1, 100, 1.5);");
+  sqlite3_close(db);
+}
+
+/* ---------- FK-column integer strictness (isolated from FK enforcement)
+ * ---------- FK enforcement is disabled inside these tests on purpose. Without
+ * the typeof() CHECK on person_id / loan_id, the row lands as text/real and the
+ * test fails. With the CHECK, the insert is aborted. This is what proves the
+ * CHECK is load-bearing rather than decorative.
+ */
+
+static void test_person_id_text_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES ('abc', 'lent', 1000);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_person_id_real_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1.5, 'lent', 1000);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_person_id_blob_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  /* BLOB x'31' = text "1" as bytes; FK OFF, only typeof catches it */
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (x'31', 'lent', 1000);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_loan_id_text_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES ('abc', 100);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM payments;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_loan_id_real_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES (1.5, 100);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM payments;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_loan_id_blob_rejected_by_typeof(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_OK(db, "PRAGMA foreign_keys = OFF;");
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES (x'31', 100);");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM payments;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_principal_float_string_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  /* '12.5' → INTEGER affinity → REAL 12.5 → typeof check must reject */
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', '12.5');");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_amount_float_string_rejected(void) {
+  sqlite3 *db = open_fresh();
+  setup_loan(db);
+  T_SQL_FAIL(db, "INSERT INTO payments(loan_id, amount) VALUES (1, '12.5');");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM payments;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_principal_exponent_string_integral_becomes_integer(void) {
+  /* '1e5' == 100000.0, losslessly integral → INTEGER affinity stores as 100000.
+   * This is correct behavior, not a bypass. Asserts the conversion path. */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+               "VALUES (1, 'lent', '1e5');");
+  T_EQ(query_ll(db, "SELECT principal_amount FROM loans WHERE id=1;"), 100000);
+  T_EQ(query_ll(db, "SELECT typeof(principal_amount) = 'integer' "
+                    "FROM loans WHERE id=1;"),
+       1);
+  sqlite3_close(db);
+}
+
+static void test_principal_real_string_integral_becomes_integer(void) {
+  /* '12.0' == 12.0, losslessly integral → stored as INTEGER 12.
+   * Same rule as '1e5': the decimal point doesn't matter if the value is whole.
+   */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_OK(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+               "VALUES (1, 'lent', '12.0');");
+  T_EQ(query_ll(db, "SELECT principal_amount FROM loans WHERE id=1;"), 12);
+  T_EQ(query_ll(db, "SELECT typeof(principal_amount) = 'integer' "
+                    "FROM loans WHERE id=1;"),
+       1);
+  sqlite3_close(db);
+}
+
+static void test_principal_exponent_string_nonintegral_rejected(void) {
+  /* '1e-1' == 0.1, not losslessly integral → stays REAL.
+   * typeof() guard must reject. If someone removes the CHECK, this fails. */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', '1e-1');");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
+static void test_principal_exponent_string_overflow_rejected(void) {
+  /* '1e19' == 10^19, exceeds INT64_MAX (~9.22e18). Cannot be stored as
+   * integer → stays REAL. typeof() guard must reject. Catches a weakened
+   * CHECK and also documents overflow handling. */
+  sqlite3 *db = open_fresh();
+  setup_person(db);
+  T_SQL_FAIL(db, "INSERT INTO loans(person_id, direction, principal_amount) "
+                 "VALUES (1, 'lent', '1e19');");
+  T_EQ(query_ll(db, "SELECT COUNT(*) FROM loans;"), 0);
+  sqlite3_close(db);
+}
+
 /* ---------- main ---------- */
 
 int main(void) {
@@ -520,6 +832,48 @@ int main(void) {
   RUN(test_due_date_zero_rejected);
   RUN(test_payment_date_zero_rejected);
   RUN(test_due_date_null_ok);
+
+  /* integer strictness — people */
+  RUN(test_created_at_text_rejected);
+  RUN(test_created_at_real_rejected);
+  RUN(test_id_string_rejected);
+  RUN(test_id_real_rejected);
+
+  /* integer strictness — loans */
+  RUN(test_principal_text_rejected);
+  RUN(test_principal_real_rejected);
+  RUN(test_principal_blob_rejected);
+  RUN(test_principal_numeric_string_becomes_integer);
+  RUN(test_principal_overflow_rejected);
+  RUN(test_date_issued_text_rejected);
+  RUN(test_date_issued_real_rejected);
+  RUN(test_due_date_text_rejected);
+  RUN(test_due_date_real_rejected);
+  RUN(test_direction_blob_rejected);
+
+  /* integer strictness — payments */
+  RUN(test_amount_text_rejected);
+  RUN(test_amount_real_rejected);
+  RUN(test_amount_numeric_string_becomes_integer);
+  RUN(test_amount_overflow_rejected);
+  RUN(test_payment_date_text_rejected);
+  RUN(test_payment_date_real_rejected);
+
+  /* FK-column integer strictness isolated from FK enforcement */
+  RUN(test_person_id_text_rejected_by_typeof);
+  RUN(test_person_id_real_rejected_by_typeof);
+  RUN(test_person_id_blob_rejected_by_typeof);
+  RUN(test_loan_id_text_rejected_by_typeof);
+  RUN(test_loan_id_real_rejected_by_typeof);
+  RUN(test_loan_id_blob_rejected_by_typeof);
+
+  /* numeric-string near-misses that must be rejected */
+  RUN(test_principal_float_string_rejected);
+  RUN(test_amount_float_string_rejected);
+  RUN(test_principal_exponent_string_integral_becomes_integer);
+  RUN(test_principal_real_string_integral_becomes_integer);
+  RUN(test_principal_exponent_string_nonintegral_rejected);
+  RUN(test_principal_exponent_string_overflow_rejected);
 
   return SUMMARY();
 }

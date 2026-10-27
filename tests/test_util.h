@@ -15,7 +15,7 @@ static const char *g_test = NULL;
     g_run++;                                                                   \
     if (!(cond)) {                                                             \
       g_fail++;                                                                \
-      fprintf(stderr, " X %s :: %s:%d\n    %s\n", g_test, __FILE__, __LINE__, \
+      fprintf(stderr, "  X %s :: %s:%d\n    %s\n", g_test, __FILE__, __LINE__, \
               #cond);                                                          \
     }                                                                          \
   } while (0)
@@ -27,7 +27,7 @@ static const char *g_test = NULL;
     long long _e = (long long)(expected);                                      \
     if (_a != _e) {                                                            \
       g_fail++;                                                                \
-      fprintf(stderr, " X %s :: %s:%d\n    %s == %lld, expected %lld\n",      \
+      fprintf(stderr, "  X %s :: %s:%d\n    %s == %lld, expected %lld\n",      \
               g_test, __FILE__, __LINE__, #actual, _a, _e);                    \
     }                                                                          \
   } while (0)
@@ -39,7 +39,7 @@ static const char *g_test = NULL;
     const char *_e = (expected);                                               \
     if (_a == NULL || _e == NULL || strcmp(_a, _e) != 0) {                     \
       g_fail++;                                                                \
-      fprintf(stderr, " X %s :: %s:%d\n    %s = \"%s\", expected \"%s\"\n",   \
+      fprintf(stderr, "  X %s :: %s:%d\n    %s = \"%s\", expected \"%s\"\n",   \
               g_test, __FILE__, __LINE__, #actual, _a ? _a : "(null)",         \
               _e ? _e : "(null)");                                             \
     }                                                                          \
@@ -51,7 +51,7 @@ static const char *g_test = NULL;
     int _rc = sqlite3_exec((db), (sql), 0, 0, NULL);                           \
     if (_rc != SQLITE_OK) {                                                    \
       g_fail++;                                                                \
-      fprintf(stderr, " X %s :: %s:%d\n    SQL failed: %s\n    err: %s\n",    \
+      fprintf(stderr, "  X %s :: %s:%d\n    SQL failed: %s\n    err: %s\n",    \
               g_test, __FILE__, __LINE__, (sql), sqlite3_errmsg(db));          \
     }                                                                          \
   } while (0)
@@ -64,7 +64,7 @@ static const char *g_test = NULL;
       g_fail++;                                                                \
       fprintf(                                                                 \
           stderr,                                                              \
-          " X %s :: %s:%d\n    expected failure, but SQL succeeded: %s\n",    \
+          "  X %s :: %s:%d\n    expected failure, but SQL succeeded: %s\n",    \
           g_test, __FILE__, __LINE__, (sql));                                  \
     }                                                                          \
   } while (0)
