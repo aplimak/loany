@@ -4,6 +4,6 @@
 
 #include <sqlite3.h>
 
-int loany_init(char *filename, sqlite3 **db) {
+int loany_init(const char *filename, sqlite3 **db) {
   return loany_db_open(filename, db);
 }
