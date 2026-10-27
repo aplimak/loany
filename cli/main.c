@@ -9,6 +9,7 @@ int main(int argc, char *argv[]) {
     sqlite3_close(db);
     return 1;
   }
+  sqlite3_close(db);
   printf("Opened sqlite db\n");
   return 0;
 }
