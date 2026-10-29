@@ -25,6 +25,14 @@ loany_error loany_init(const char *filename,
                        void (*update_callback)(struct loany_state *state),
                        loany_state_t **state);
 
+/**
+ * Close the database.
+ */
 void loany_close(loany_state_t *state);
+
+/**
+ * Add single person to the database.
+ */
+loany_error loany_add_person(loany_state_t *state, loany_person_t *person);
 
 #endif

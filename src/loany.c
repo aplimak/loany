@@ -18,3 +18,12 @@ loany_error loany_init(const char *filename,
 }
 
 void loany_close(loany_state_t *state) { sqlite3_close(state->db); }
+
+loany_error loany_add_person(loany_state_t *state, loany_person_t *person) {
+  int sqlite_rc = loany_db_add_person(state->db, person);
+  if (sqlite_rc != SQLITE_OK)
+    return LOANY_ERR_SQLITE;
+  if (state->update_callback)
+    state->update_callback(state);
+  return LOANY_OK;
+}

@@ -1,4 +1,5 @@
 #include "loany/internal/db.h"
+#include "loany/loany.h"
 
 #include <sqlite3.h>
 #include <stdbool.h>
@@ -131,6 +132,61 @@ fail:
   }
   if (do_rollback)
     sqlite3_exec(*db, "ROLLBACK;", 0, 0, NULL);
+done:
+  return rc;
+}
+
+int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
+  static const char sql_without_created_at[] =
+      "INSERT INTO people (name, phone, email) VALUES (?1, ?2, ?3)";
+  static const char sql_with_created_at[] =
+      "INSERT INTO people (name, phone, email, "
+      "                    created_at) VALUES (?1, ?2, ?3, ?4)";
+
+  sqlite3_stmt *st = NULL;
+  int rc = sqlite3_prepare_v2(
+      db, person->created_at ? sql_with_created_at : sql_without_created_at, -1,
+      &st, NULL);
+  if (rc != SQLITE_OK)
+    goto done;
+
+  /* name: NOT NULL */
+  rc = sqlite3_bind_text(st, 1, person->name, -1, SQLITE_TRANSIENT);
+  if (rc != SQLITE_OK)
+    goto clean;
+
+  /* phone: nullable */
+  if (person->phone)
+    rc = sqlite3_bind_text(st, 2, person->phone, -1, SQLITE_TRANSIENT);
+  else
+    rc = sqlite3_bind_null(st, 2);
+  if (rc != SQLITE_OK)
+    goto clean;
+
+  /* email: nullable */
+  if (person->email)
+    rc = sqlite3_bind_text(st, 3, person->email, -1, SQLITE_TRANSIENT);
+  else
+    rc = sqlite3_bind_null(st, 3);
+  if (rc != SQLITE_OK)
+    goto clean;
+
+  /* created_at: has default value */
+  if (person->created_at) {
+    rc = sqlite3_bind_int64(st, 4, person->created_at);
+    if (rc != SQLITE_OK)
+      goto clean;
+  }
+
+  rc = sqlite3_step(st);
+  if (rc == SQLITE_DONE) {
+    person->id = sqlite3_last_insert_rowid(db);
+    rc = SQLITE_OK;
+    /* p->created_at is NOT known here */
+  }
+
+clean:
+  sqlite3_finalize(st);
 done:
   return rc;
 }
