@@ -1,4 +1,4 @@
-#include "loany/loany.h"
+#include "loany/internal/db.h"
 #include "test_util.h"
 #include <sqlite3.h>
 #include <stdio.h>
@@ -8,7 +8,7 @@
 
 static sqlite3 *open_fresh(void) {
   sqlite3 *db = NULL;
-  if (loany_init(":memory:", &db) != SQLITE_OK) {
+  if (loany_db_open(":memory:", &db) != SQLITE_OK) {
     fprintf(stderr, "FATAL: cannot open fresh in-memory db\n");
     exit(2);
   }
@@ -94,12 +94,12 @@ static void test_idempotent_reopen(void) {
   remove("/tmp/loany_test_reopen.db-shm");
 
   sqlite3 *a = NULL;
-  T_EQ(loany_init(path, &a), SQLITE_OK);
+  T_EQ(loany_db_open(path, &a), SQLITE_OK);
   if (a)
     sqlite3_close(a);
 
   sqlite3 *b = NULL;
-  T_EQ(loany_init(path, &b), SQLITE_OK);
+  T_EQ(loany_db_open(path, &b), SQLITE_OK);
   if (b)
     sqlite3_close(b);
 
