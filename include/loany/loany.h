@@ -29,7 +29,7 @@ loany_error loany_init(const char *filename,
 /**
  * Close the database. and clean up the state
  */
-void loany_close(loany_state_t *statep);
+void loany_close(loany_state_t *state);
 
 /**
  * Add single person to the database.
