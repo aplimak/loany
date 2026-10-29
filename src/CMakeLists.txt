@@ -11,4 +11,4 @@ target_include_directories(loany PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(loany PRIVATE sqlite3)
+target_link_libraries(loany PRIVATE $<BUILD_INTERFACE:SQLite3::SQLite3>)

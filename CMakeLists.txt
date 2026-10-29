@@ -10,7 +10,37 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(SQLite3 REQUIRED)
+find_package(SQLite3 3.35 QUIET)
+
+if(SQLite3_FOUND)
+  message(STATUS "Using system SQLite3 ${SQLite3_VERSION}")
+else()
+  message(STATUS "System SQLite3 missing or too old — vendoring 3.54.1")
+
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    cmake_policy(SET CMP0135 NEW)
+  endif()
+
+  include(FetchContent)
+  FetchContent_Declare(
+        sqlite3_amalgamation
+        URL      https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip
+        URL_HASH SHA3_256=92281c86e2957f9b9305890f9ac04204caa7b677cc868dc326d942689df28e30
+    )
+  FetchContent_MakeAvailable(sqlite3_amalgamation)
+
+  add_library(sqlite3 STATIC
+        ${sqlite3_amalgamation_SOURCE_DIR}/sqlite3.c
+    )
+  target_include_directories(sqlite3 PUBLIC
+        ${sqlite3_amalgamation_SOURCE_DIR}
+    )
+
+  find_package(Threads REQUIRED)
+  target_link_libraries(sqlite3 PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
+
+  add_library(SQLite3::SQLite3 ALIAS sqlite3)
+endif()
 
 add_subdirectory(src)
 
