@@ -20,16 +20,16 @@ typedef struct loany_person {
 
 /**
  * Open or create a database and initialize the loany schema.
- * The state must be freed even on fail.
+ * The state must be closed even on fail.
  */
 loany_error loany_init(const char *filename,
                        void (*update_callback)(struct loany_state *state),
-                       loany_state_t **state);
+                       loany_state_t *state);
 
 /**
  * Close the database. and clean up the state
  */
-void loany_close(loany_state_t **statep);
+void loany_close(loany_state_t *statep);
 
 /**
  * Add single person to the database.
