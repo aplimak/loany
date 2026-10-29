@@ -11,6 +11,7 @@ static const char *const k_loany_msgs[LOANY_ERR__COUNT] = {
     [LOANY_ERR_EXISTS] = "already exists",
     [LOANY_ERR_STATE] = "invalid library state",
     [LOANY_ERR_SQLITE] = "sqlite error",
+    [LOANY_ERR_OLD_SQLITE] = "sqlite too old",
 };
 
 const char *loany_strerror(loany_error err) {

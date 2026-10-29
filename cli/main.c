@@ -44,6 +44,6 @@ int main(int argc, char *argv[]) {
   }
 
 clean:
-  loany_close(state);
+  loany_close(&state);
   return exit_code;
 }

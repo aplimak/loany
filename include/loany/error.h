@@ -12,6 +12,7 @@ typedef enum {
   LOANY_ERR_EXISTS,
   LOANY_ERR_STATE,
   LOANY_ERR_SQLITE,
+  LOANY_ERR_OLD_SQLITE,
   LOANY_ERR__COUNT
 } loany_error;
 
