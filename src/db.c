@@ -137,11 +137,12 @@ done:
 }
 
 int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
+#define SQL_RET " RETURNING id, created_at"
   static const char sql_without_created_at[] =
-      "INSERT INTO people (name, phone, email) VALUES (?1, ?2, ?3)";
+      "INSERT INTO people (name, phone, email) VALUES (?1, ?2, ?3)" SQL_RET;
   static const char sql_with_created_at[] =
       "INSERT INTO people (name, phone, email, "
-      "                    created_at) VALUES (?1, ?2, ?3, ?4)";
+      "                    created_at) VALUES (?1, ?2, ?3, ?4)" SQL_RET;
 
   sqlite3_stmt *st = NULL;
   int rc = sqlite3_prepare_v2(
@@ -183,6 +184,10 @@ int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
     person->id = sqlite3_last_insert_rowid(db);
     rc = SQLITE_OK;
     /* p->created_at is NOT known here */
+  } else if (rc == SQLITE_ROW) { /* RETURNING emits exactly one row */
+    person->id = sqlite3_column_int64(st, 0);
+    person->created_at = sqlite3_column_int64(st, 1);
+    rc = SQLITE_OK;
   }
 
 clean:

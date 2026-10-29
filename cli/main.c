@@ -2,6 +2,7 @@
 #include "loany/loany.h"
 #include <sqlite3.h>
 #include <stdio.h>
+#include <time.h>
 
 #define HANDLE_ERR(m)                                                          \
   exit_code = m;                                                               \
@@ -26,6 +27,21 @@ int main(int argc, char *argv[]) {
   loany_person_t person = {
       .name = "Test", .phone = "test phone", .email = "test@email.com"};
   HANDLE_ERR(loany_add_person(state, &person));
+  printf("Person created with id: %lld\n", person.id);
+  printf("Name: %s\n", person.name);
+  printf("Phone: %s\n", person.phone);
+  printf("Email: %s\n", person.email);
+
+  if (person.created_at) {
+    time_t t = (time_t)person.created_at;
+    struct tm *tm_localtime = localtime(&t);
+    char buf[64];
+    if (strftime(buf, sizeof buf, "%Y-%m-%d %H:%M:%S %Z", tm_localtime) == 0) {
+      fprintf(stderr, "strftime failed\n");
+      return 1;
+    }
+    printf("Created At: %s\n", buf);
+  }
 
 clean:
   loany_close(state);
