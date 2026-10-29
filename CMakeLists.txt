@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 project(Loany VERSION 1.0.0 LANGUAGES C)
 
+option(LOANY_BUILD_SQLITE "Build the sqlite3 statically" OFF)
 option(LOANY_BUILD_TESTS "Build the test suite" ON)
 option(LOANY_BUILD_CLI   "Build the command-line interface" ON)
 
@@ -10,12 +11,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(SQLite3 3.35 QUIET)
+if (NOT LOANY_BUILD_SQLITE)
+  find_package(SQLite3 3.35 QUIET)
+endif()
 
 if(SQLite3_FOUND)
   message(STATUS "Using system SQLite3 ${SQLite3_VERSION}")
 else()
-  message(STATUS "System SQLite3 missing or too old — vendoring 3.54.1")
+  if (NOT LOANY_BUILD_SQLITE)
+    message(STATUS "System SQLite3 missing or too old — building 3.54.1")
+  else()
+    message(STATUS "User requested sqlite3 build — building 3.54.1")
+  endif()
 
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
     cmake_policy(SET CMP0135 NEW)
