@@ -1,6 +1,7 @@
 add_library(loany STATIC
     loany.c
     db.c
+    error.c
 )
 
 add_library(Loany::loany ALIAS loany)

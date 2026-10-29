@@ -1,9 +1,11 @@
 #include "loany/internal/db.h"
 
 #include <sqlite3.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 int loany_db_open(const char *filename, sqlite3 **db) {
+  bool do_rollback = false;
   int rc = sqlite3_open_v2(
       filename, db,
       SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
@@ -90,28 +92,30 @@ int loany_db_open(const char *filename, sqlite3 **db) {
   if ((rc = sqlite3_exec(*db, "BEGIN IMMEDIATE;", 0, 0, &err)) != SQLITE_OK)
     goto fail;
 
+  do_rollback = true;
+
   if ((rc = sqlite3_exec(*db, cmd_init_people, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating table %s\n", "people");
+    // fprintf(stderr, "error while creating table %s\n", "people");
     goto fail;
   }
   if ((rc = sqlite3_exec(*db, cmd_init_loans, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating table %s\n", "loans");
+    // fprintf(stderr, "error while creating table %s\n", "loans");
     goto fail;
   }
   if ((rc = sqlite3_exec(*db, cmd_init_payments, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating table %s\n", "payments");
+    // fprintf(stderr, "error while creating table %s\n", "payments");
     goto fail;
   }
   if ((rc = sqlite3_exec(*db, cmd_init_indexes, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating indexes\n");
+    // fprintf(stderr, "error while creating indexes\n");
     goto fail;
   }
   if ((rc = sqlite3_exec(*db, cmd_init_views, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating views\n");
+    // fprintf(stderr, "error while creating views\n");
     goto fail;
   }
   if ((rc = sqlite3_exec(*db, cmd_init_triggers, 0, 0, &err)) != SQLITE_OK) {
-    fprintf(stderr, "error while creating triggers\n");
+    // fprintf(stderr, "error while creating triggers\n");
     goto fail;
   }
 
@@ -122,10 +126,11 @@ int loany_db_open(const char *filename, sqlite3 **db) {
 
 fail:
   if (err) {
-    fprintf(stderr, "SQL error: %s\n", err);
+    // fprintf(stderr, "SQL error: %s\n", err);
     sqlite3_free(err);
   }
-  sqlite3_exec(*db, "ROLLBACK;", 0, 0, NULL);
+  if (do_rollback)
+    sqlite3_exec(*db, "ROLLBACK;", 0, 0, NULL);
 done:
   return rc;
 }
