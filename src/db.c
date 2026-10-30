@@ -3,6 +3,7 @@
 
 #include <sqlite3.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 
 int loany_db_open(const char *filename, sqlite3 **db) {
@@ -192,6 +193,37 @@ int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
 
 clean:
   sqlite3_finalize(st);
+done:
+  return rc;
+}
+
+int loany_db_add_people(sqlite3 *db, loany_person_t *const *people, size_t n) {
+  if (n == 0)
+    return SQLITE_OK;
+  if (!people)
+    return SQLITE_MISUSE;
+  int rc = 0;
+  if ((rc = sqlite3_exec(db, "SAVEPOINT loany_db_add_people", NULL, NULL,
+                         NULL)) != SQLITE_OK)
+    goto done;
+  for (size_t i = 0; i < n; i++) {
+    if (!people[i]) {
+      rc = SQLITE_MISUSE;
+      goto fail;
+    }
+    if ((rc = loany_db_add_person(db, people[i])) != SQLITE_OK) {
+      goto fail;
+    }
+  }
+  if ((rc = sqlite3_exec(db, "RELEASE loany_db_add_people", NULL, NULL,
+                         NULL)) != SQLITE_OK)
+    goto fail;
+
+  goto done;
+fail:
+  sqlite3_exec(db,
+               "ROLLBACK TO loany_db_add_people; RELEASE loany_db_add_people;",
+               NULL, NULL, NULL);
 done:
   return rc;
 }
