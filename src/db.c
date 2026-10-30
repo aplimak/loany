@@ -1,6 +1,10 @@
 #include "loany/internal/db.h"
 #include "loany/loany.h"
 
+#include "schema_loans_sql.h"
+#include "schema_payments_sql.h"
+#include "schema_people_sql.h"
+
 #include <sqlite3.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -15,42 +19,6 @@ int loany_db_open(const char *filename, sqlite3 **db) {
     return rc;
   }
 
-  static const char *cmd_init_people =
-      "CREATE TABLE IF NOT EXISTS people ("
-      "  id INTEGER PRIMARY KEY,"
-      "  name TEXT NOT NULL CHECK(length(trim(name)) > 0),"
-      "  phone TEXT,"
-      "  email TEXT,"
-      "  created_at INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS "
-      "    INTEGER)) CHECK(typeof(created_at) = 'integer' AND created_at > 0)"
-      ");";
-  static const char *cmd_init_loans =
-      "CREATE TABLE IF NOT EXISTS loans ("
-      "  id INTEGER PRIMARY KEY,"
-      "  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT "
-      "    CHECK(typeof(person_id) = 'integer'),"
-      "  direction TEXT NOT NULL CHECK(direction IN ('lent', 'borrowed')),"
-      "  principal_amount INTEGER NOT NULL CHECK(typeof(principal_amount) = "
-      "    'integer' AND principal_amount > 0),"
-      "  description TEXT,"
-      "  date_issued INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS "
-      "    INTEGER)) CHECK(typeof(date_issued) = 'integer' AND date_issued > "
-      "    0),"
-      "  due_date INTEGER CHECK(due_date IS NULL OR (typeof(due_date) = "
-      "    'integer' AND due_date > 0))"
-      ");";
-  static const char *cmd_init_payments =
-      "CREATE TABLE IF NOT EXISTS payments ("
-      "  id INTEGER PRIMARY KEY,"
-      "  loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE RESTRICT "
-      "    CHECK(typeof(loan_id) = 'integer'),"
-      "  amount INTEGER NOT NULL CHECK(typeof(amount) = 'integer' AND amount > "
-      "    0),"
-      "  payment_date INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS "
-      "    INTEGER)) CHECK(typeof(payment_date) = 'integer' AND payment_date > "
-      "    0),"
-      "  note TEXT"
-      ");";
   static const char *cmd_init_indexes =
       "CREATE INDEX IF NOT EXISTS idx_loans_person_id ON loans(person_id);"
       "CREATE INDEX IF NOT EXISTS idx_payments_loan_id ON payments(loan_id);";
@@ -96,15 +64,18 @@ int loany_db_open(const char *filename, sqlite3 **db) {
 
   do_rollback = true;
 
-  if ((rc = sqlite3_exec(*db, cmd_init_people, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_PEOPLE_SQL, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "people");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, cmd_init_loans, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_LOANS_SQL, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "loans");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, cmd_init_payments, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_PAYMENTS_SQL, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "payments");
     goto fail;
   }
