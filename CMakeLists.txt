@@ -24,24 +24,8 @@ else()
     message(STATUS "User requested sqlite3 build — building 3.54.1")
   endif()
 
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-    cmake_policy(SET CMP0135 NEW)
-  endif()
-
-  include(FetchContent)
-  FetchContent_Declare(
-        sqlite3_amalgamation
-        URL      https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip
-        URL_HASH SHA3_256=92281c86e2957f9b9305890f9ac04204caa7b677cc868dc326d942689df28e30
-    )
-  FetchContent_MakeAvailable(sqlite3_amalgamation)
-
-  add_library(sqlite3 STATIC
-        ${sqlite3_amalgamation_SOURCE_DIR}/sqlite3.c
-    )
-  target_include_directories(sqlite3 PUBLIC
-        ${sqlite3_amalgamation_SOURCE_DIR}
-    )
+  add_library(sqlite3 STATIC third_party/sqlite3/sqlite3.c)
+  target_include_directories(sqlite3 PUBLIC third_party/sqlite3)
 
   find_package(Threads REQUIRED)
   target_link_libraries(sqlite3 PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
