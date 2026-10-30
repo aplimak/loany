@@ -1,0 +1,17 @@
+[
+  {
+    "label": "Debug CLI",
+    "build": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "cmake -DCMAKE_BUILD_TYPE=Debug -B build && cmake --build build",
+      ],
+      "cwd": "$ZED_WORKTREE_ROOT",
+    },
+    "program": "$ZED_WORKTREE_ROOT/build/cli/loany_cli",
+    "cwd": "$ZED_WORKTREE_ROOT/build/cli",
+    "request": "launch",
+    "adapter": "GDB",
+  },
+]
