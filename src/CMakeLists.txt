@@ -14,10 +14,11 @@ foreach(SQL_FILE IN LISTS SQL_FILES)
   add_custom_command(
         OUTPUT "${GENERATED_HEADER}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-        COMMAND xxd -C -t -i -n "${VAR_NAME}"
+        COMMAND "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SQL_FILE}"
         "${GENERATED_HEADER}"
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${SQL_FILE}"
+        "${VAR_NAME}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${SQL_FILE}" "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh"
         COMMENT "Embedding ${SQL_FILE} into ${GENERATED_HEADER}"
         VERBATIM
     )

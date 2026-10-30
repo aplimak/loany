@@ -64,18 +64,15 @@ int loany_db_open(const char *filename, sqlite3 **db) {
 
   do_rollback = true;
 
-  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_PEOPLE_SQL, 0, 0, &err)) !=
-      SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, SCHEMA_PEOPLE_SQL, 0, 0, &err)) != SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "people");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_LOANS_SQL, 0, 0, &err)) !=
-      SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, SCHEMA_LOANS_SQL, 0, 0, &err)) != SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "loans");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, (const char *)SCHEMA_PAYMENTS_SQL, 0, 0, &err)) !=
-      SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, SCHEMA_PAYMENTS_SQL, 0, 0, &err)) != SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "payments");
     goto fail;
   }
