@@ -1,9 +1,7 @@
 #include "loany/internal/db.h"
 #include "loany/loany.h"
 
-#include "schema_loans_sql.h"
-#include "schema_payments_sql.h"
-#include "schema_people_sql.h"
+#include "generated/sql_str.h"
 
 #include <sqlite3.h>
 #include <stdbool.h>
@@ -64,15 +62,18 @@ int loany_db_open(const char *filename, sqlite3 **db) {
 
   do_rollback = true;
 
-  if ((rc = sqlite3_exec(*db, SCHEMA_PEOPLE_SQL, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_TABLES_PEOPLE, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "people");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, SCHEMA_LOANS_SQL, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_TABLES_LOANS, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "loans");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, SCHEMA_PAYMENTS_SQL, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_TABLES_PAYMENTS, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating table %s\n", "payments");
     goto fail;
   }

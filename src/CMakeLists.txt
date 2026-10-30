@@ -1,29 +1,21 @@
-set(SQL_FILES
-    schema/people.sql
-    schema/loans.sql
-    schema/payments.sql
+set(SQL_DIR      "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SQL_SCRIPT   "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh")
+set(GEN_INC_DIR  "${CMAKE_CURRENT_BINARY_DIR}/include")
+set(GEN_DIR      "${GEN_INC_DIR}/generated")
+set(GEN_HEADER   "${GEN_DIR}/sql_str.h")
+
+file(GLOB_RECURSE SQL_SOURCES CONFIGURE_DEPENDS "${SQL_DIR}/*.sql")
+
+add_custom_command(
+    OUTPUT  "${GEN_HEADER}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${GEN_DIR}"
+    COMMAND bash "${SQL_SCRIPT}" "${SQL_DIR}" "${GEN_HEADER}" loany_sql
+    DEPENDS "${SQL_SCRIPT}" ${SQL_SOURCES}
+    COMMENT "Embedding SQL from ${SQL_DIR} -> ${GEN_HEADER}"
+    VERBATIM
 )
 
-foreach(SQL_FILE IN LISTS SQL_FILES)
-  string(REGEX REPLACE "\\.[^.]*$" "" SQL_STEM "${SQL_FILE}")
-  string(REGEX REPLACE "[^A-Za-z0-9]" "_" SQL_IDENT "${SQL_STEM}")
-
-  set(VAR_NAME "${SQL_IDENT}_sql")
-  set(GENERATED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/${VAR_NAME}.h")
-
-  add_custom_command(
-        OUTPUT "${GENERATED_HEADER}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-        COMMAND "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh"
-        "${CMAKE_CURRENT_SOURCE_DIR}/${SQL_FILE}"
-        "${GENERATED_HEADER}"
-        "${VAR_NAME}"
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${SQL_FILE}" "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh"
-        COMMENT "Embedding ${SQL_FILE} into ${GENERATED_HEADER}"
-        VERBATIM
-    )
-  list(APPEND GENERATED_HEADERS "${GENERATED_HEADER}")
-endforeach()
+add_custom_target(loany_db_sql_str DEPENDS "${GEN_HEADER}")
 
 add_library(loany STATIC
     loany.c
@@ -38,7 +30,7 @@ target_include_directories(loany PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_sources(loany PRIVATE ${GENERATED_HEADERS})
-target_include_directories(loany PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+add_dependencies(loany loany_db_sql_str)
+target_include_directories(loany PRIVATE "${GEN_INC_DIR}")
 
 target_link_libraries(loany PRIVATE $<BUILD_INTERFACE:SQLite3::SQLite3>)
