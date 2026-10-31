@@ -33,6 +33,47 @@ else()
   add_library(SQLite3::SQLite3 ALIAS sqlite3)
 endif()
 
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wundef
+        -Wformat=2
+        -Wcast-align
+        -Wcast-qual
+        -Wwrite-strings
+        -Wmissing-prototypes
+        -Wstrict-prototypes
+        -Wold-style-definition
+        -Wunterminated-string-initialization
+
+        -Wpointer-arith
+        -Wswitch-enum
+        -Wredundant-decls
+        -Wnested-externs
+        -Wdouble-promotion
+
+        -Wconversion
+        -Wsign-conversion
+        -Wfloat-equal
+        -Wpadded
+        -Wuseless-cast
+
+        -Waggregate-return
+        -Wmissing-declarations
+        -Wunsuffixed-float-constants
+        -Wswitch-default
+        -Wformat-nonliteral
+        -Wdisabled-optimization
+
+        -fanalyzer
+    )
+elseif(MSVC)
+  add_compile_options(/W4 /permissive-)
+endif()
+
 add_subdirectory(src)
 
 if(LOANY_BUILD_CLI)
