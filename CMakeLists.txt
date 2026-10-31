@@ -85,6 +85,9 @@ endif()
 
 if(SQLite3_FOUND)
   message(STATUS "Using system SQLite3 ${SQLite3_VERSION}")
+  if(NOT TARGET SQLite3::SQLite3)
+    add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+  endif()
 else()
   if (NOT LOANY_BUILD_SQLITE)
     message(STATUS "System SQLite3 missing or too old — building 3.54.1")
@@ -92,13 +95,7 @@ else()
     message(STATUS "User requested sqlite3 build — building 3.54.1")
   endif()
 
-  add_library(sqlite3 STATIC third_party/sqlite3/sqlite3.c)
-  target_include_directories(sqlite3 PUBLIC third_party/sqlite3)
-
-  find_package(Threads REQUIRED)
-  target_link_libraries(sqlite3 PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
-
-  add_library(SQLite3::SQLite3 ALIAS sqlite3)
+  add_subdirectory(third_party/sqlite3)
 endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
