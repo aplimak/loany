@@ -8,6 +8,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#define SQL_CHECKED_CALL(m)                                                    \
+  if ((rc = m) != SQLITE_OK)                                                   \
+    goto fail;
+
 int loany_db_open(const char *filename, sqlite3 **db) {
   bool do_rollback = false;
   int rc = sqlite3_open_v2(
@@ -76,83 +80,91 @@ done:
 }
 
 int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
-  int rc = 0;
-  int frc = 0;
-  sqlite3_stmt *st = NULL;
-
-  if ((rc = sqlite3_prepare_v2(db, LOANY_SQL_COMMAND_ADD_PERSON, -1, &st,
-                               NULL)) != SQLITE_OK)
-    goto done;
-
-  /* name: NOT NULL */
-  if ((rc = sqlite3_bind_text(st, 1, person->name, -1, SQLITE_TRANSIENT)) !=
-      SQLITE_OK)
-    goto clean;
-
-  /* phone: nullable */
-  if ((rc = person->phone
-                ? sqlite3_bind_text(st, 2, person->phone, -1, SQLITE_TRANSIENT)
-                : sqlite3_bind_null(st, 2)) != SQLITE_OK)
-    goto clean;
-
-  /* email: nullable */
-  if ((rc = person->email
-                ? sqlite3_bind_text(st, 3, person->email, -1, SQLITE_TRANSIENT)
-                : sqlite3_bind_null(st, 3)) != SQLITE_OK)
-    goto clean;
-
-  /* created_at: has default value */
-  if ((rc = person->created_at ? sqlite3_bind_int64(st, 4, person->created_at)
-                               : sqlite3_bind_null(st, 4)) != SQLITE_OK)
-    goto clean;
-
-  if ((rc = sqlite3_step(st)) != SQLITE_ROW)
-    goto clean;
-
-  person->id = sqlite3_column_int64(st, 0);
-  person->created_at = sqlite3_column_int64(st, 1);
-
-  /* Second step: must reach DONE, otherwise the write is rolled back. */
-  if ((rc = sqlite3_step(st)) != SQLITE_DONE)
-    goto clean;
-
-  rc = SQLITE_OK;
-
-clean:
-  frc = sqlite3_finalize(st);
-  if (rc == SQLITE_OK)
-    rc = frc;
-done:
-  return rc;
+  loany_person_t *arr[] = {person};
+  return loany_db_add_people(db, arr, 1);
 }
 
 int loany_db_add_people(sqlite3 *db, loany_person_t *const *people, size_t n) {
+  int rc = SQLITE_OK;
+  int frc = 0;
+  bool do_rollback = false;
+  bool have_savepoint = false;
+  sqlite3_stmt *st = NULL;
+
   if (n == 0)
     return SQLITE_OK;
   if (!people)
     return SQLITE_MISUSE;
-  int rc = 0;
-  if ((rc = sqlite3_exec(db, "SAVEPOINT loany_db_add_people", NULL, NULL,
-                         NULL)) != SQLITE_OK)
-    goto done;
+
+  SQL_CHECKED_CALL(
+      sqlite3_exec(db, "SAVEPOINT loany_db_add_people", NULL, NULL, NULL));
+
+  have_savepoint = true;
+
+  SQL_CHECKED_CALL(
+      sqlite3_prepare_v2(db, LOANY_SQL_COMMAND_ADD_PERSON, -1, &st, NULL));
+
   for (size_t i = 0; i < n; i++) {
     if (!people[i]) {
       rc = SQLITE_MISUSE;
       goto fail;
     }
-    if ((rc = loany_db_add_person(db, people[i])) != SQLITE_OK) {
-      goto fail;
-    }
-  }
-  if ((rc = sqlite3_exec(db, "RELEASE loany_db_add_people", NULL, NULL,
-                         NULL)) != SQLITE_OK)
-    goto fail;
 
-  goto done;
+    loany_person_t *person = people[i];
+
+    /* name: NOT NULL */
+    SQL_CHECKED_CALL(
+        sqlite3_bind_text(st, 1, person->name, -1, SQLITE_TRANSIENT));
+
+    /* phone: nullable */
+    SQL_CHECKED_CALL(person->phone ? sqlite3_bind_text(st, 2, person->phone, -1,
+                                                       SQLITE_TRANSIENT)
+                                   : sqlite3_bind_null(st, 2));
+
+    /* email: nullable */
+    SQL_CHECKED_CALL(person->email ? sqlite3_bind_text(st, 3, person->email, -1,
+                                                       SQLITE_TRANSIENT)
+                                   : sqlite3_bind_null(st, 3));
+
+    /* created_at: has default value */
+    SQL_CHECKED_CALL(person->created_at
+                         ? sqlite3_bind_int64(st, 4, person->created_at)
+                         : sqlite3_bind_null(st, 4));
+
+    if ((rc = sqlite3_step(st)) != SQLITE_ROW)
+      goto fail;
+
+    person->id = sqlite3_column_int64(st, 0);
+    person->created_at = sqlite3_column_int64(st, 1);
+
+    /* Second step: must reach DONE, otherwise the write is rolled back. */
+    if ((rc = sqlite3_step(st)) != SQLITE_DONE)
+      goto fail;
+
+    SQL_CHECKED_CALL(sqlite3_reset(st));
+    SQL_CHECKED_CALL(sqlite3_clear_bindings(st));
+  }
+
+  SQL_CHECKED_CALL(
+      sqlite3_exec(db, "RELEASE loany_db_add_people", NULL, NULL, NULL));
+
+  rc = SQLITE_OK;
+
+  goto clean;
+
 fail:
-  sqlite3_exec(db,
-               "ROLLBACK TO loany_db_add_people; RELEASE loany_db_add_people;",
-               NULL, NULL, NULL);
-done:
+  do_rollback = have_savepoint;
+clean:
+  if (st) {
+    frc = sqlite3_finalize(st);
+    if (rc == SQLITE_OK)
+      rc = frc;
+  }
+  if (do_rollback) {
+    sqlite3_exec(
+        db, "ROLLBACK TO loany_db_add_people; RELEASE loany_db_add_people;",
+        NULL, NULL, NULL);
+  }
+
   return rc;
 }
