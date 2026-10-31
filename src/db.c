@@ -17,44 +17,10 @@ int loany_db_open(const char *filename, sqlite3 **db) {
     return rc;
   }
 
-  static const char *cmd_init_indexes =
-      "CREATE INDEX IF NOT EXISTS idx_loans_person_id ON loans(person_id);"
-      "CREATE INDEX IF NOT EXISTS idx_payments_loan_id ON payments(loan_id);";
-  static const char *cmd_init_views =
-      "CREATE VIEW IF NOT EXISTS loan_balances AS "
-      "SELECT "
-      "  l.id, l.person_id, l.direction, l.principal_amount, "
-      "  l.description, l.date_issued, l.due_date, "
-      "  COALESCE((SELECT SUM(amount) FROM payments "
-      "             WHERE loan_id = l.id), 0) AS paid_amount, "
-      "  l.principal_amount - COALESCE((SELECT SUM(amount) FROM payments "
-      "                               WHERE loan_id = l.id), 0) AS "
-      "outstanding, "
-      "  CASE WHEN COALESCE((SELECT SUM(amount) FROM payments "
-      "                       WHERE loan_id = l.id), 0) >= l.principal_amount "
-      "       THEN 'settled' ELSE 'active' END AS status "
-      "FROM loans l;";
-
-  static const char *cmd_init_triggers =
-      "CREATE TRIGGER IF NOT EXISTS trg_loans_immutable "
-      "BEFORE UPDATE ON loans "
-      "BEGIN "
-      "  SELECT RAISE(ABORT, 'loans are immutable: delete and re-insert'); "
-      "END;"
-
-      "CREATE TRIGGER IF NOT EXISTS trg_payments_immutable "
-      "BEFORE UPDATE ON payments "
-      "BEGIN "
-      "  SELECT RAISE(ABORT, 'payments are immutable: delete and re-insert'); "
-      "END;";
-
   char *err = 0;
 
-  if ((rc = sqlite3_exec(*db,
-                         "PRAGMA foreign_keys = ON;"
-                         "PRAGMA journal_mode = WAL;"
-                         "PRAGMA busy_timeout = 5000;",
-                         0, 0, &err)) != SQLITE_OK)
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_PRAGMA, 0, 0, &err)) !=
+      SQLITE_OK)
     goto fail;
 
   if ((rc = sqlite3_exec(*db, "BEGIN IMMEDIATE;", 0, 0, &err)) != SQLITE_OK)
@@ -77,15 +43,18 @@ int loany_db_open(const char *filename, sqlite3 **db) {
     // fprintf(stderr, "error while creating table %s\n", "payments");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, cmd_init_indexes, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_INDEXES, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating indexes\n");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, cmd_init_views, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_VIEWS, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating views\n");
     goto fail;
   }
-  if ((rc = sqlite3_exec(*db, cmd_init_triggers, 0, 0, &err)) != SQLITE_OK) {
+  if ((rc = sqlite3_exec(*db, LOANY_SQL_SCHEMA_TRIGGERS, 0, 0, &err)) !=
+      SQLITE_OK) {
     // fprintf(stderr, "error while creating triggers\n");
     goto fail;
   }
