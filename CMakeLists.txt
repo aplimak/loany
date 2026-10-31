@@ -1,15 +1,66 @@
 cmake_minimum_required(VERSION 3.18)
 project(Loany VERSION 1.0.0 LANGUAGES C)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
+  # Set the possible values for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 option(LOANY_BUILD_SQLITE "Build the sqlite3 statically" OFF)
 option(LOANY_BUILD_TESTS "Build the test suite" ON)
 option(LOANY_BUILD_CLI   "Build the command-line interface" ON)
+option(ENABLE_CLANG_TIDY "Run clang-tidy during build" OFF)
+option(ENABLE_SANITIZERS "Build with ASan+UBSan" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if(ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_BIN clang-tidy REQUIRED)
+    set(CMAKE_C_CLANG_TIDY
+        ${CLANG_TIDY_BIN}
+        "--checks=-*,bugprone-*,clang-analyzer-*,performance-*,portability-*,readability-*"
+        "--warnings-as-errors=*"
+    )
+  endif()
+
+  if(ENABLE_SANITIZERS AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options(
+          -fsanitize=address,undefined
+          -fno-omit-frame-pointer
+          -fno-sanitize-recover=all
+          -O1
+          -no-pie            # <-- add this
+      )
+    add_link_options(-fsanitize=address,undefined -no-pie)  # <-- and here
+    set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+  endif()
+endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  add_compile_options(
+        -fstack-protector-strong
+        -fstack-clash-protection
+        -fcf-protection=full
+        -Wformat
+        -Wformat-security
+    )
+  add_link_options(
+        -Wl,-z,relro,-z,now
+        -Wl,-z,noexecstack
+    )
+endif()
+
+# _FORTIFY_SOURCE needs optimisation; apply in Release (and RelWithDebInfo)
+if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo|MinSizeRel")
+  add_compile_options(-D_FORTIFY_SOURCE=3)
+endif()
 
 if (NOT LOANY_BUILD_SQLITE)
   find_package(SQLite3 3.35 QUIET)
