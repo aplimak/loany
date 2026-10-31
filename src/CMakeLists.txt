@@ -41,4 +41,9 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   elseif(MSVC)
     target_compile_options(loany PRIVATE /WX)
   endif()
+  if(ipo_supported)
+    set_target_properties(loany PROPERTIES
+          INTERPROCEDURAL_OPTIMIZATION TRUE
+      )
+  endif()
 endif()

@@ -20,6 +20,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   if(ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY_BIN clang-tidy REQUIRED)
@@ -30,7 +33,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
   endif()
 
-  if(ENABLE_SANITIZERS AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang" AND ENABLE_SANITIZERS)
     add_compile_options(
           -fsanitize=address,undefined
           -fno-omit-frame-pointer
@@ -40,6 +43,21 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
       )
     add_link_options(-fsanitize=address,undefined -no-pie)  # <-- and here
     set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+  endif()
+else()
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options(
+              -fno-semantic-interposition
+              -fno-plt
+              -ffunction-sections
+              -fdata-sections
+          )
+    add_link_options(
+              -Wl,--gc-sections
+              -static-libgcc
+              -Wl,-s
+          )
+    add_compile_options(-fanalyzer)
   endif()
 endif()
 
@@ -118,8 +136,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         -Wswitch-default
         -Wformat-nonliteral
         -Wdisabled-optimization
-
-        -fanalyzer
     )
 elseif(MSVC)
   add_compile_options(/W4 /permissive-)
