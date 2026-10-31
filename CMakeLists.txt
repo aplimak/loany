@@ -57,7 +57,6 @@ else()
               -static-libgcc
               -Wl,-s
           )
-    add_compile_options(-fanalyzer)
   endif()
 endif()
 
