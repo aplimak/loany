@@ -76,61 +76,52 @@ done:
 }
 
 int loany_db_add_person(sqlite3 *db, loany_person_t *person) {
-#define SQL_RET " RETURNING id, created_at"
-  static const char sql_without_created_at[] =
-      "INSERT INTO people (name, phone, email) VALUES (?1, ?2, ?3)" SQL_RET;
-  static const char sql_with_created_at[] =
-      "INSERT INTO people (name, phone, email, "
-      "                    created_at) VALUES (?1, ?2, ?3, ?4)" SQL_RET;
-
+  int rc = 0;
+  int frc = 0;
   sqlite3_stmt *st = NULL;
-  int rc = sqlite3_prepare_v2(
-      db, person->created_at ? sql_with_created_at : sql_without_created_at, -1,
-      &st, NULL);
-  if (rc != SQLITE_OK)
+
+  if ((rc = sqlite3_prepare_v2(db, LOANY_SQL_COMMAND_ADD_PERSON, -1, &st,
+                               NULL)) != SQLITE_OK)
     goto done;
 
   /* name: NOT NULL */
-  rc = sqlite3_bind_text(st, 1, person->name, -1, SQLITE_TRANSIENT);
-  if (rc != SQLITE_OK)
+  if ((rc = sqlite3_bind_text(st, 1, person->name, -1, SQLITE_TRANSIENT)) !=
+      SQLITE_OK)
     goto clean;
 
   /* phone: nullable */
-  if (person->phone)
-    rc = sqlite3_bind_text(st, 2, person->phone, -1, SQLITE_TRANSIENT);
-  else
-    rc = sqlite3_bind_null(st, 2);
-  if (rc != SQLITE_OK)
+  if ((rc = person->phone
+                ? sqlite3_bind_text(st, 2, person->phone, -1, SQLITE_TRANSIENT)
+                : sqlite3_bind_null(st, 2)) != SQLITE_OK)
     goto clean;
 
   /* email: nullable */
-  if (person->email)
-    rc = sqlite3_bind_text(st, 3, person->email, -1, SQLITE_TRANSIENT);
-  else
-    rc = sqlite3_bind_null(st, 3);
-  if (rc != SQLITE_OK)
+  if ((rc = person->email
+                ? sqlite3_bind_text(st, 3, person->email, -1, SQLITE_TRANSIENT)
+                : sqlite3_bind_null(st, 3)) != SQLITE_OK)
     goto clean;
 
   /* created_at: has default value */
-  if (person->created_at) {
-    rc = sqlite3_bind_int64(st, 4, person->created_at);
-    if (rc != SQLITE_OK)
-      goto clean;
-  }
+  if ((rc = person->created_at ? sqlite3_bind_int64(st, 4, person->created_at)
+                               : sqlite3_bind_null(st, 4)) != SQLITE_OK)
+    goto clean;
 
-  rc = sqlite3_step(st);
-  if (rc == SQLITE_DONE) {
-    person->id = sqlite3_last_insert_rowid(db);
-    rc = SQLITE_OK;
-    /* p->created_at is NOT known here */
-  } else if (rc == SQLITE_ROW) { /* RETURNING emits exactly one row */
-    person->id = sqlite3_column_int64(st, 0);
-    person->created_at = sqlite3_column_int64(st, 1);
-    rc = SQLITE_OK;
-  }
+  if ((rc = sqlite3_step(st)) != SQLITE_ROW)
+    goto clean;
+
+  person->id = sqlite3_column_int64(st, 0);
+  person->created_at = sqlite3_column_int64(st, 1);
+
+  /* Second step: must reach DONE, otherwise the write is rolled back. */
+  if ((rc = sqlite3_step(st)) != SQLITE_DONE)
+    goto clean;
+
+  rc = SQLITE_OK;
 
 clean:
-  sqlite3_finalize(st);
+  frc = sqlite3_finalize(st);
+  if (rc == SQLITE_OK)
+    rc = frc;
 done:
   return rc;
 }
