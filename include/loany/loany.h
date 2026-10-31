@@ -12,9 +12,9 @@ typedef struct loany_state {
 
 typedef struct loany_person {
   sqlite3_int64 id;
-  char *name;
-  char *phone;
-  char *email;
+  char name[64];
+  char phone[16];
+  char email[64];
   sqlite3_int64 created_at;
 } loany_person_t;
 
