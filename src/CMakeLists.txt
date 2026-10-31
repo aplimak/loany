@@ -1,4 +1,4 @@
-set(SQL_DIR      "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SQL_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/sql")
 set(SQL_SCRIPT   "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh")
 set(GEN_INC_DIR  "${CMAKE_CURRENT_BINARY_DIR}/include")
 set(GEN_DIR      "${GEN_INC_DIR}/generated")
