@@ -17,7 +17,10 @@
     goto clean;                                                                \
   }
 
-void update_hook(loany_state_t *state) { printf("Received update signal\n"); }
+static void update_hook(loany_state_t *state) {
+  (void)state;
+  printf("Received update signal\n");
+}
 
 int main(int argc, char *argv[]) {
   loany_state_t state;
