@@ -33,7 +33,7 @@ target_include_directories(loany PUBLIC
 add_dependencies(loany loany_db_sql_str)
 target_include_directories(loany PRIVATE "${GEN_INC_DIR}")
 
-target_link_libraries(loany PRIVATE $<BUILD_INTERFACE:SQLite3::SQLite3>)
+target_link_libraries(loany PUBLIC $<BUILD_INTERFACE:SQLite3::SQLite3>)
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
