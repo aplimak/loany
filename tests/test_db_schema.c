@@ -1,4 +1,4 @@
-#include "loany/internal/db.h"
+#include "../src/db.h"
 #include "test_util.h"
 #include <sqlite3.h>
 #include <stdio.h>

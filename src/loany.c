@@ -1,10 +1,9 @@
 #include "loany/loany.h"
 
+#include "db.h"
 #include "loany/error.h"
-#include "loany/internal/db.h"
 
 #include <sqlite3.h>
-#include <stdlib.h>
 #include <string.h>
 
 loany_error loany_init(const char *filename,

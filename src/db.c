@@ -1,4 +1,4 @@
-#include "loany/internal/db.h"
+#include "db.h"
 #include "loany/loany.h"
 
 #include "generated/sql_str.h"
