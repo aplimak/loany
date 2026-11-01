@@ -56,11 +56,6 @@ else()
   add_subdirectory(third_party/sqlite3)
 endif()
 
-include(CheckCCompilerFlag)
-check_c_compiler_flag(-Wunterminated-string-initialization
-    LOANY_HAVE_W_UNINIT_STR
-  )
-
 add_subdirectory(src)
 
 if(LOANY_BUILD_CLI)

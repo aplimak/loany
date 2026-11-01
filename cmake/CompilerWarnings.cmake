@@ -36,6 +36,11 @@ function(loany_set_warnings target)
     -Wdisabled-optimization
     )
   endif()
+  
+  include(CheckCCompilerFlag)
+  check_c_compiler_flag(-Wunterminated-string-initialization
+    LOANY_HAVE_W_UNINIT_STR
+  )
   if(LOANY_HAVE_W_UNINIT_STR)
     target_compile_options(${target} PRIVATE
         -Wunterminated-string-initialization

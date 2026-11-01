@@ -19,9 +19,13 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
 
   # ELF-only hardening — explicitly exclude Android
   if(NOT WIN32 AND NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+    include(CheckCCompilerFlag)
+    check_c_compiler_flag(-fcf-protection=full LOANY_HAVE_CF_PROTECTION)
+    if(LOANY_HAVE_CF_PROTECTION)
+      target_compile_options(loany_hardening INTERFACE -fcf-protection=full)
+    endif()
     target_compile_options(loany_hardening INTERFACE
       -fstack-clash-protection
-      -fcf-protection=full
     )
     target_link_options(loany_hardening INTERFACE
       -Wl,-z,relro,-z,now
