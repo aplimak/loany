@@ -1,5 +1,5 @@
 set(SQL_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/sql")
-set(SQL_SCRIPT   "${CMAKE_SOURCE_DIR}/cmake/compile_sql.sh")
+set(SQL_SCRIPT   "${CMAKE_SOURCE_DIR}/scripts/compile_sql.sh")
 set(GEN_INC_DIR  "${CMAKE_CURRENT_BINARY_DIR}/include")
 set(GEN_DIR      "${GEN_INC_DIR}/generated")
 set(GEN_HEADER   "${GEN_DIR}/sql_str.h")
@@ -30,20 +30,23 @@ target_include_directories(loany PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
+target_link_libraries(loany PRIVATE
+    loany_sanitizers
+    loany_hardening
+  )
 add_dependencies(loany loany_db_sql_str)
 target_include_directories(loany PRIVATE "${GEN_INC_DIR}")
+loany_set_warnings(loany)
 
-target_link_libraries(loany PUBLIC $<BUILD_INTERFACE:SQLite3::SQLite3>)
+target_link_libraries(loany PUBLIC SQLite3::SQLite3)
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(loany PRIVATE -Werror)
-  elseif(MSVC)
-    target_compile_options(loany PRIVATE /WX)
-  endif()
-  if(ipo_supported)
-    set_target_properties(loany PROPERTIES
-          INTERPROCEDURAL_OPTIMIZATION TRUE
-      )
-  endif()
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  target_compile_options(loany PRIVATE $<$<NOT:$<CONFIG:Debug>>:-Werror>)
+elseif(MSVC)
+  target_compile_options(loany PRIVATE $<$<NOT:$<CONFIG:Debug>>:/WX>)
+endif()
+
+if(ipo_supported)
+  set_target_properties(loany PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION $<NOT:$<CONFIG:Debug>>)
 endif()

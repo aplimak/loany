@@ -13,7 +13,6 @@ option(LOANY_BUILD_SQLITE "Build the sqlite3 locally" OFF)
 option(LOANY_BUILD_TESTS "Build the test suite" ON)
 option(LOANY_BUILD_CLI   "Build the command-line interface" ON)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during build (only debug builds)" OFF)
-option(ENABLE_SANITIZERS "Build with ASan+UBSan (only debug builds)" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 11)
@@ -24,73 +23,18 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if(ENABLE_CLANG_TIDY)
-    find_program(CLANG_TIDY_BIN clang-tidy REQUIRED)
-    set(CMAKE_C_CLANG_TIDY
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CompilerWarnings)
+include(Sanitizers)
+include(Hardening)
+
+if (ENABLE_CLANG_TIDY AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  find_program(CLANG_TIDY_BIN clang-tidy REQUIRED)
+  set(CMAKE_C_CLANG_TIDY
         ${CLANG_TIDY_BIN}
         "--checks=-*,bugprone-*,clang-analyzer-*,performance-*,portability-*,readability-*"
         "--warnings-as-errors=*"
     )
-  endif()
-
-  if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang" AND ENABLE_SANITIZERS)
-    add_compile_options(
-          -fsanitize=address,undefined
-          -fno-omit-frame-pointer
-          -fno-sanitize-recover=all
-          -O1
-      )
-    add_link_options(-fsanitize=address,undefined)
-    if(NOT WIN32)
-      add_compile_options(-no-pie)
-      add_link_options(
-          "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-no-pie>"
-      )
-      set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
-    endif()
-  endif()
-elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  add_compile_options(
-              -ffunction-sections
-              -fdata-sections
-          )
-  add_link_options(
-              -Wl,--gc-sections
-              -static-libgcc
-              -Wl,-s
-          )
-  if (NOT WIN32)
-    add_compile_options(
-                  -fno-semantic-interposition
-                  -fno-plt
-              )
-  endif()
-endif()
-
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  add_compile_options(
-        -fstack-protector-strong
-        -Wformat
-        -Wformat-security
-    )
-
-  if(NOT WIN32)
-    # ELF / x86-64 SysV hardening — meaningless or unsupported on PE
-    add_compile_options(
-          -fstack-clash-protection
-          -fcf-protection=full
-      )
-    add_link_options(
-          -Wl,-z,relro,-z,now
-          -Wl,-z,noexecstack
-      )
-  endif()
-endif()
-
-# _FORTIFY_SOURCE needs optimisation; apply in Release (and RelWithDebInfo)
-if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo|MinSizeRel")
-  add_compile_options(-D_FORTIFY_SOURCE=3)
 endif()
 
 if (NOT LOANY_BUILD_SQLITE)
@@ -112,44 +56,10 @@ else()
   add_subdirectory(third_party/sqlite3)
 endif()
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wshadow
-        -Wundef
-        -Wformat=2
-        -Wcast-align
-        -Wcast-qual
-        -Wwrite-strings
-        -Wmissing-prototypes
-        -Wstrict-prototypes
-        -Wold-style-definition
-        -Wunterminated-string-initialization
-
-        -Wpointer-arith
-        -Wswitch-enum
-        -Wredundant-decls
-        -Wnested-externs
-        -Wdouble-promotion
-
-        -Wconversion
-        -Wsign-conversion
-        -Wfloat-equal
-        -Wpadded
-        -Wuseless-cast
-
-        -Waggregate-return
-        -Wmissing-declarations
-        -Wunsuffixed-float-constants
-        -Wswitch-default
-        -Wformat-nonliteral
-        -Wdisabled-optimization
-    )
-elseif(MSVC)
-  add_compile_options(/W4 /permissive-)
-endif()
+include(CheckCCompilerFlag)
+check_c_compiler_flag(-Wunterminated-string-initialization
+    LOANY_HAVE_W_UNINIT_STR
+  )
 
 add_subdirectory(src)
 
