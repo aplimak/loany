@@ -19,6 +19,3 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 # CMake determines how to examine dependencies based on the *host* system, leading to
 # a `file unknown error` unless the target platform is explicitly specified.
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "windows+pe")
-
-# Disable problematic sanitizers
-set(ENABLE_SANITIZERS OFF)

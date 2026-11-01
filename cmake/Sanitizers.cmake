@@ -29,4 +29,5 @@ target_compile_options(loany_sanitizers INTERFACE
 )
 target_link_options(loany_sanitizers INTERFACE
   -fsanitize=address,undefined
+  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-no-pie>
 )
