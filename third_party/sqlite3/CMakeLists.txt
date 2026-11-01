@@ -1,24 +1,24 @@
 find_package(Threads REQUIRED)
 
-add_library(sqlite3_vendored STATIC sqlite3.c)
+add_library(sqlite3 STATIC sqlite3.c)
 
-target_include_directories(sqlite3_vendored
+target_include_directories(sqlite3
     SYSTEM PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(sqlite3_vendored
+target_link_libraries(sqlite3
     PUBLIC
         Threads::Threads
         ${CMAKE_DL_LIBS}
 )
 if(NOT WIN32)
-    target_link_libraries(sqlite3_vendored PRIVATE m)
+    target_link_libraries(sqlite3 PRIVATE m)
 endif()
 
-add_library(SQLite3::SQLite3 ALIAS sqlite3_vendored)
+add_library(SQLite3::SQLite3 ALIAS sqlite3)
 
-target_compile_definitions(sqlite3_vendored PRIVATE
+target_compile_definitions(sqlite3 PRIVATE
     SQLITE_THREADSAFE=1
     SQLITE_ENABLE_FTS5
     SQLITE_ENABLE_RTREE
