@@ -39,39 +39,50 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
           -fno-omit-frame-pointer
           -fno-sanitize-recover=all
           -O1
-          -no-pie            # <-- add this
       )
-    add_link_options(-fsanitize=address,undefined -no-pie)  # <-- and here
-    set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+    add_link_options(-fsanitize=address,undefined)
+    if(NOT WIN32)
+      add_compile_options(-no-pie)
+      add_link_options(-no-pie)
+      set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+    endif()
   endif()
-else()
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    add_compile_options(
-              -fno-semantic-interposition
-              -fno-plt
+elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  add_compile_options(
               -ffunction-sections
               -fdata-sections
           )
-    add_link_options(
+  add_link_options(
               -Wl,--gc-sections
               -static-libgcc
               -Wl,-s
           )
+  if (NOT WIN32)
+    add_compile_options(
+                  -fno-semantic-interposition
+                  -fno-plt
+              )
   endif()
 endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   add_compile_options(
         -fstack-protector-strong
-        -fstack-clash-protection
-        -fcf-protection=full
         -Wformat
         -Wformat-security
     )
-  add_link_options(
-        -Wl,-z,relro,-z,now
-        -Wl,-z,noexecstack
-    )
+
+  if(NOT WIN32)
+    # ELF / x86-64 SysV hardening — meaningless or unsupported on PE
+    add_compile_options(
+          -fstack-clash-protection
+          -fcf-protection=full
+      )
+    add_link_options(
+          -Wl,-z,relro,-z,now
+          -Wl,-z,noexecstack
+      )
+  endif()
 endif()
 
 # _FORTIFY_SOURCE needs optimisation; apply in Release (and RelWithDebInfo)
