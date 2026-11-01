@@ -1,6 +1,6 @@
 find_package(Threads REQUIRED)
 
-add_library(sqlite3 STATIC sqlite3.c)
+add_library(sqlite3 sqlite3.c)
 
 target_include_directories(sqlite3
     SYSTEM PUBLIC
@@ -13,7 +13,7 @@ target_link_libraries(sqlite3
         ${CMAKE_DL_LIBS}
 )
 if(NOT WIN32)
-    target_link_libraries(sqlite3 PRIVATE m)
+  target_link_libraries(sqlite3 PRIVATE m)
 endif()
 
 add_library(SQLite3::SQLite3 ALIAS sqlite3)

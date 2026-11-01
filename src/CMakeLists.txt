@@ -17,7 +17,7 @@ add_custom_command(
 
 add_custom_target(loany_db_sql_str DEPENDS "${GEN_HEADER}")
 
-add_library(loany STATIC
+add_library(loany
     loany.c
     db.c
     error.c
