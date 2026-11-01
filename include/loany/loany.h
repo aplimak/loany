@@ -2,8 +2,9 @@
 #define LOANY_LOANY_H
 
 #include "loany/error.h"
-#include <sqlite3.h>
 #include <stdint.h>
+
+typedef struct sqlite3 sqlite3;
 
 typedef struct loany_state {
   sqlite3 *db;
@@ -11,11 +12,11 @@ typedef struct loany_state {
 } loany_state_t;
 
 typedef struct loany_person {
-  sqlite3_int64 id;
+  int64_t id;
   char name[64];
   char phone[16];
   char email[64];
-  sqlite3_int64 created_at;
+  int64_t created_at;
 } loany_person_t;
 
 /**

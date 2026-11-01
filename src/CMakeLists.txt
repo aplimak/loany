@@ -38,7 +38,7 @@ add_dependencies(loany loany_db_sql_str)
 target_include_directories(loany PRIVATE "${GEN_INC_DIR}")
 loany_set_warnings(loany)
 
-target_link_libraries(loany PUBLIC SQLite3::SQLite3)
+target_link_libraries(loany PRIVATE SQLite3::SQLite3)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   target_compile_options(loany PRIVATE $<$<NOT:$<CONFIG:Debug>>:-Werror>)

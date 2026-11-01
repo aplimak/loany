@@ -1,6 +1,5 @@
 #include "loany/error.h"
 #include "loany/loany.h"
-#include <sqlite3.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -9,8 +8,8 @@
   if (exit_code != LOANY_OK) {                                                 \
     fprintf(stderr, "%s", loany_strerror(exit_code));                          \
     if (exit_code == LOANY_ERR_SQLITE) {                                       \
-      fprintf(stderr, ": %s\n", sqlite3_errmsg(state.db));                     \
-      exit_code = sqlite3_errcode(state.db);                                   \
+      fprintf(stderr, ": %s\n", loany_sql_strerror(state.db));                 \
+      exit_code = loany_sql_errcode(state.db);                                 \
     } else {                                                                   \
       fprintf(stderr, "\n");                                                   \
     }                                                                          \

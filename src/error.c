@@ -19,3 +19,7 @@ const char *loany_strerror(loany_error err) {
     return k_loany_msgs[err];
   return "unknown error";
 }
+
+const char *loany_sql_strerror(sqlite3 *db) { return sqlite3_errmsg(db); }
+
+int loany_sql_errcode(sqlite3 *db) { return sqlite3_errcode(db); }

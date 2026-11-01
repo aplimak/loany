@@ -16,7 +16,15 @@ typedef enum {
   LOANY_ERR__COUNT
 } loany_error;
 
+typedef struct sqlite3 sqlite3;
+
 /* Static description of a loany_error. For LOANY_ERR_SQLITE this returns a
  * generic "sqlite error" string. */
 const char *loany_strerror(loany_error err);
+
+/*Dynamic sqlite error message. */
+const char *loany_sql_strerror(sqlite3 *db);
+
+/*Dynamic sqlite error code. */
+int loany_sql_errcode(sqlite3 *db);
 #endif
